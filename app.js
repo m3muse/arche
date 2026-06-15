@@ -331,6 +331,7 @@
     return { tab, name: 'home' };
   }
   backBtn.addEventListener('click', back);
+  document.getElementById('profileChip').addEventListener('click', () => switchTab('settings'));
   document.querySelectorAll('.tab-btn').forEach(b => {
     b.addEventListener('click', () => switchTab(b.dataset.tab));
   });
