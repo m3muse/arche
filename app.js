@@ -731,34 +731,75 @@
   }
 
   // ---- 나누기 ----
+  const DIV_GROUP_SIZE = 10; // 레벨당 그룹 수
+  const DIV_SUPER_COUNT = 2; // 총 레벨 수 (10개씩 2레벨 = 20그룹)
+  function divGroupRange(superLv) {
+    const start = (superLv - 1) * DIV_GROUP_SIZE + 1;
+    const end = superLv * DIV_GROUP_SIZE;
+    return { start, end };
+  }
+
   function renderDiv(v) {
+    // ① 레벨 선택 (2개)
     if (v.name === 'home') {
       titleEl.textContent = t('tab.div');
-      const cards = DIV_LEVELS.map(lv => {
-        const basic = divLevelCount(lv);
-        const applied = divAppliedCount(lv);
-        const fully = divFullyDone(lv);
-        const basicPct = basic / DIV_LEVEL_QCOUNT;
-        const appPct = Math.min(applied / DIV_APPLIED_GOAL, 1);
-        const pct = Math.round((basicPct * 0.5 + appPct * 0.5) * 100);
-        return `
-          <div class="card ${fully ? 'complete' : ''}" data-lv="${lv}">
-            <div class="label">${t('common.level')} ${lv}</div>
-            <div class="sub">${t(`div.levelDesc.${lv}`)}</div>
+      const cards = [];
+      for (let sl = 1; sl <= DIV_SUPER_COUNT; sl++) {
+        const { start, end } = divGroupRange(sl);
+        let done = 0;
+        for (let lv = start; lv <= end; lv++) if (divFullyDone(lv)) done++;
+        const pct = Math.round(done / DIV_GROUP_SIZE * 100);
+        const complete = done === DIV_GROUP_SIZE;
+        cards.push(`
+          <div class="card ${complete ? 'complete' : ''}" data-sl="${sl}">
+            <div class="label">${t('common.level')} ${sl}</div>
+            <div class="sub">${t('common.group')} ${start} ~ ${end}</div>
             <div class="progress-bar"><span style="width:${pct}%"></span></div>
-            <div class="sub">${t('common.basic')} ${basic}/${DIV_LEVEL_QCOUNT}</div>
-            <div class="sub">${t('common.applied')} ${Math.min(applied, DIV_APPLIED_GOAL)}/${DIV_APPLIED_GOAL}</div>
-          </div>`;
-      }).join('');
-      app.innerHTML = `<div class="section-title">${t('common.selectLevel')}</div><div class="dan-grid">${cards}</div>`;
+            <div class="sub">${done} / ${DIV_GROUP_SIZE}</div>
+          </div>`);
+      }
+      app.innerHTML = `
+        <div class="section-title">${t('common.selectLevel')}</div>
+        <div class="level-grid">${cards.join('')}</div>`;
       app.querySelectorAll('.card').forEach(el => {
-        el.addEventListener('click', () => go({ tab: 'div', name: 'levelMenu', level: +el.dataset.lv }));
+        el.addEventListener('click', () =>
+          go({ tab: 'div', name: 'groups', superLevel: +el.dataset.sl }));
       });
       return;
     }
-    if (v.name === 'levelMenu') {
+
+    // ② 그룹 선택 (10개)
+    if (v.name === 'groups') {
+      const { start, end } = divGroupRange(v.superLevel);
+      titleEl.textContent = `${t('common.level')} ${v.superLevel}`;
+      const cards = [];
+      for (let lv = start; lv <= end; lv++) {
+        const basic = divLevelCount(lv);
+        const applied = divAppliedCount(lv);
+        const fully = divFullyDone(lv);
+        const pct = Math.round((basic / DIV_LEVEL_QCOUNT * 0.5 + Math.min(applied / DIV_APPLIED_GOAL, 1) * 0.5) * 100);
+        cards.push(`
+          <div class="card ${fully ? 'complete' : ''}" data-lv="${lv}">
+            <div class="label">${t('common.group')} ${lv}</div>
+            <div class="sub">${t(`div.levelDesc.${lv}`)}</div>
+            <div class="progress-bar"><span style="width:${pct}%"></span></div>
+            <div class="sub">${basic}/${DIV_LEVEL_QCOUNT}</div>
+          </div>`);
+      }
+      app.innerHTML = `
+        <div class="section-title">${t('common.group')} ${start} ~ ${end}</div>
+        <div class="dan-grid">${cards.join('')}</div>`;
+      app.querySelectorAll('.card').forEach(el => {
+        el.addEventListener('click', () =>
+          go({ tab: 'div', name: 'groupMenu', level: +el.dataset.lv, superLevel: v.superLevel }));
+      });
+      return;
+    }
+
+    // ③ 기초/응용 선택
+    if (v.name === 'groupMenu') {
       const lv = v.level;
-      titleEl.textContent = `${t('common.level')} ${lv}`;
+      titleEl.textContent = `${t('common.group')} ${lv}`;
       const basicDone = divLevelDone(lv);
       const basicCount = divLevelCount(lv);
       const applied = divAppliedCount(lv);
@@ -779,19 +820,21 @@
         el.addEventListener('click', () => {
           const s = el.dataset.stage;
           if (s === 'applied' && !basicDone) { alert(t('common.basicNotDone')); return; }
-          go({ tab: 'div', name: s === 'basic' ? 'basicQuiz' : 'appliedQuiz', level: lv });
+          go({ tab: 'div', name: s === 'basic' ? 'basicQuiz' : 'appliedQuiz', level: lv, superLevel: v.superLevel });
         });
       });
       return;
     }
+
     if (v.name === 'basicQuiz') {
-      renderDivBasicQuiz(v.level);
+      renderDivBasicQuiz(v.level, v.superLevel);
       return;
     }
     if (v.name === 'appliedQuiz') {
       const lv = v.level;
+      const sl = v.superLevel;
       renderRandomQuiz({
-        title: `${t('common.level')} ${lv} · ${t('common.applied')}`,
+        title: `${t('common.group')} ${lv} · ${t('common.applied')}`,
         getCount: () => {
           const n = divAppliedCount(lv);
           return `${Math.min(n, DIV_APPLIED_GOAL)}/${DIV_APPLIED_GOAL}` + (n > DIV_APPLIED_GOAL ? ` (+${n-DIV_APPLIED_GOAL})` : '');
@@ -806,7 +849,7 @@
         gen: () => genDivAppliedRaw(lv),
         nextLabel: t('common.levelList'),
         onNext: () => {
-          stack = [{ tab: 'div', name: 'home' }];
+          stack = [{ tab: 'div', name: 'home' }, { tab: 'div', name: 'groups', superLevel: sl }];
           render();
         },
         onReset: () => {
@@ -818,9 +861,10 @@
     }
   }
 
-  function renderDivBasicQuiz(level) {
+  function renderDivBasicQuiz(level, superLevel) {
+    superLevel = superLevel || Math.ceil(level / DIV_GROUP_SIZE);
     const desc = t(`div.levelDesc.${level}`);
-    titleEl.textContent = `${t('common.level')} ${level} · ${desc}`;
+    titleEl.textContent = `${t('common.group')} ${level} · ${desc}`;
     const state = progress.div.basic[level] || {};
     const isDecimalLevel = !!DIV_LEVEL_CFG[level]?.decimal;
     const probs = Array.from({ length: DIV_LEVEL_QCOUNT }, (_, i) => genDivBasicProblem(level, i));
@@ -836,7 +880,7 @@
     const done = divLevelCount(level);
     app.innerHTML = `
       <div class="dan-header">
-        <h2>${t('common.level')} ${level}</h2>
+        <h2>${t('common.group')} ${level}</h2>
         <div>
           <span class="count">${done}/${DIV_LEVEL_QCOUNT}</span>
           <button class="reset-btn" id="resetDiv">${t('common.reset')}</button>
@@ -868,7 +912,7 @@
                 🎉 ${t('common.level')} ${level} ${t('common.basic')} ${t('common.perfect')} — ${t('common.levelList')} →
               </button>`;
             const b = document.getElementById('goDivAppliedBtn');
-            const h = () => { stack = [{ tab: 'div', name: 'home' }]; render(); };
+            const h = () => { stack = [{ tab: 'div', name: 'home' }, { tab: 'div', name: 'groups', superLevel }]; render(); };
             b.addEventListener('click', h);
             b.addEventListener('touchend', h);
           }
@@ -891,37 +935,78 @@
   }
 
   // ---- 퍼센트 ----
+  const PCT_GROUP_SIZE = 10;
+  const PCT_SUPER_COUNT = 2;
+  function pctGroupRange(superLv) {
+    const start = (superLv - 1) * PCT_GROUP_SIZE + 1;
+    const end = superLv * PCT_GROUP_SIZE;
+    return { start, end };
+  }
+
   function renderPct(v) {
+    // ① 레벨 선택 (2개)
     if (v.name === 'home') {
       titleEl.textContent = t('tab.pct');
-      const cards = PCT_LEVELS.map(lv => {
-        const basic = pctLevelCount(lv);
-        const applied = pctAppliedCount(lv);
-        const fully = pctFullyDone(lv);
-        const basicPct = basic / PCT_BASIC_COUNT;
-        const appPct = Math.min(applied / PCT_APPLIED_GOAL, 1);
-        const pct = Math.round((basicPct * 0.5 + appPct * 0.5) * 100);
-        const type = PCT_LEVEL_CFG[lv].type;
-        return `
-          <div class="card ${fully ? 'complete' : ''}" data-lv="${lv}">
-            <div class="label">${t('common.level')} ${lv}</div>
-            <div class="sub">${type === 'of' ? t('pct.catOf') : t('pct.catRatio')}</div>
+      const cards = [];
+      for (let sl = 1; sl <= PCT_SUPER_COUNT; sl++) {
+        const { start, end } = pctGroupRange(sl);
+        let done = 0;
+        for (let lv = start; lv <= end; lv++) if (pctFullyDone(lv)) done++;
+        const pct = Math.round(done / PCT_GROUP_SIZE * 100);
+        const complete = done === PCT_GROUP_SIZE;
+        cards.push(`
+          <div class="card ${complete ? 'complete' : ''}" data-sl="${sl}">
+            <div class="label">${t('common.level')} ${sl}</div>
+            <div class="sub">${t('common.group')} ${start} ~ ${end}</div>
             <div class="progress-bar"><span style="width:${pct}%"></span></div>
-            <div class="sub">${t('common.basic')} ${basic}/${PCT_BASIC_COUNT}</div>
-            <div class="sub">${t('common.applied')} ${Math.min(applied, PCT_APPLIED_GOAL)}/${PCT_APPLIED_GOAL}</div>
-          </div>`;
-      }).join('');
-      app.innerHTML = `<div class="section-title">${t('common.selectLevel')}</div><div class="dan-grid">${cards}</div>`;
+            <div class="sub">${done} / ${PCT_GROUP_SIZE}</div>
+          </div>`);
+      }
+      app.innerHTML = `
+        <div class="section-title">${t('common.selectLevel')}</div>
+        <div class="level-grid">${cards.join('')}</div>`;
       app.querySelectorAll('.card').forEach(el => {
-        el.addEventListener('click', () => go({ tab: 'pct', name: 'levelMenu', level: +el.dataset.lv }));
+        el.addEventListener('click', () =>
+          go({ tab: 'pct', name: 'groups', superLevel: +el.dataset.sl }));
       });
       return;
     }
-    if (v.name === 'levelMenu') {
+
+    // ② 그룹 선택 (10개)
+    if (v.name === 'groups') {
+      const { start, end } = pctGroupRange(v.superLevel);
+      titleEl.textContent = `${t('common.level')} ${v.superLevel}`;
+      const cards = [];
+      for (let lv = start; lv <= end; lv++) {
+        const basic = pctLevelCount(lv);
+        const applied = pctAppliedCount(lv);
+        const fully = pctFullyDone(lv);
+        const pct = Math.round((basic / PCT_BASIC_COUNT * 0.5 + Math.min(applied / PCT_APPLIED_GOAL, 1) * 0.5) * 100);
+        const type = PCT_LEVEL_CFG[lv].type;
+        cards.push(`
+          <div class="card ${fully ? 'complete' : ''}" data-lv="${lv}">
+            <div class="label">${t('common.group')} ${lv}</div>
+            <div class="sub">${type === 'of' ? t('pct.catOf') : t('pct.catRatio')}</div>
+            <div class="progress-bar"><span style="width:${pct}%"></span></div>
+            <div class="sub">${basic}/${PCT_BASIC_COUNT}</div>
+          </div>`);
+      }
+      app.innerHTML = `
+        <div class="section-title">${t('common.group')} ${start} ~ ${end}</div>
+        <div class="dan-grid">${cards.join('')}</div>`;
+      app.querySelectorAll('.card').forEach(el => {
+        el.addEventListener('click', () =>
+          go({ tab: 'pct', name: 'groupMenu', level: +el.dataset.lv, superLevel: v.superLevel }));
+      });
+      return;
+    }
+
+    // ③ 기초/응용 선택
+    if (v.name === 'groupMenu') {
       const lv = v.level;
       const type = PCT_LEVEL_CFG[lv].type;
       const typeLabel = type === 'of' ? t('pct.catOf') : t('pct.catRatio');
-      titleEl.textContent = `${t('common.level')} ${lv}`;
+      titleEl.textContent = `${t('common.group')} ${lv}`;
       const basicDone = pctLevelDone(lv);
       const basicCount = pctLevelCount(lv);
       const applied = pctAppliedCount(lv);
@@ -942,19 +1027,21 @@
         el.addEventListener('click', () => {
           const s = el.dataset.stage;
           if (s === 'applied' && !basicDone) { alert(t('common.basicNotDone')); return; }
-          go({ tab: 'pct', name: s === 'basic' ? 'basicQuiz' : 'appliedQuiz', level: lv });
+          go({ tab: 'pct', name: s === 'basic' ? 'basicQuiz' : 'appliedQuiz', level: lv, superLevel: v.superLevel });
         });
       });
       return;
     }
+
     if (v.name === 'basicQuiz') {
-      renderPctBasicQuiz(v.level);
+      renderPctBasicQuiz(v.level, v.superLevel);
       return;
     }
     if (v.name === 'appliedQuiz') {
       const lv = v.level;
+      const sl = v.superLevel;
       renderRandomQuiz({
-        title: `${t('common.level')} ${lv} · ${t('common.applied')}`,
+        title: `${t('common.group')} ${lv} · ${t('common.applied')}`,
         getCount: () => {
           const n = pctAppliedCount(lv);
           return `${Math.min(n, PCT_APPLIED_GOAL)}/${PCT_APPLIED_GOAL}` + (n > PCT_APPLIED_GOAL ? ` (+${n-PCT_APPLIED_GOAL})` : '');
@@ -969,7 +1056,7 @@
         gen: () => genPctAppliedRaw(lv),
         nextLabel: t('common.levelList'),
         onNext: () => {
-          stack = [{ tab: 'pct', name: 'home' }];
+          stack = [{ tab: 'pct', name: 'home' }, { tab: 'pct', name: 'groups', superLevel: sl }];
           render();
         },
         onReset: () => {
@@ -981,10 +1068,11 @@
     }
   }
 
-  function renderPctBasicQuiz(level) {
+  function renderPctBasicQuiz(level, superLevel) {
+    superLevel = superLevel || Math.ceil(level / PCT_GROUP_SIZE);
     const cfg = PCT_LEVEL_CFG[level];
     const typeLabel = cfg.type === 'of' ? t('pct.catOf') : t('pct.catRatio');
-    titleEl.textContent = `${t('common.level')} ${level} · ${typeLabel}`;
+    titleEl.textContent = `${t('common.group')} ${level} · ${typeLabel}`;
     const state = progress.pct.basic[level] || {};
     const probs = Array.from({ length: PCT_BASIC_COUNT }, (_, i) => genPctBasicProblem(level, i));
     const rows = probs.map((p, i) => {
@@ -999,7 +1087,7 @@
     const done = pctLevelCount(level);
     app.innerHTML = `
       <div class="dan-header">
-        <h2>${t('common.level')} ${level}</h2>
+        <h2>${t('common.group')} ${level}</h2>
         <div>
           <span class="count">${done}/${PCT_BASIC_COUNT}</span>
           <button class="reset-btn" id="resetPct">${t('common.reset')}</button>
@@ -1031,7 +1119,7 @@
                 🎉 ${t('common.level')} ${level} ${t('common.basic')} ${t('common.perfect')} — ${t('common.levelList')} →
               </button>`;
             const b = document.getElementById('goPctAppliedBtn');
-            const h = () => { stack = [{ tab: 'pct', name: 'home' }]; render(); };
+            const h = () => { stack = [{ tab: 'pct', name: 'home' }, { tab: 'pct', name: 'groups', superLevel }]; render(); };
             b.addEventListener('click', h);
             b.addEventListener('touchend', h);
           }
