@@ -42,11 +42,34 @@ body {
   border-bottom: 1px solid var(--border);
   position: sticky; top: 0; z-index: 10;
 }
-.topbar h1 {
-  margin: 0; font-size: 19px; flex: 1;
-  background: linear-gradient(135deg, #fff 30%, var(--accent-2));
+/* 로고 */
+.topbar-logo {
+  display: flex; align-items: center; gap: 1px;
+  flex-shrink: 0; text-decoration: none;
+}
+.logo-mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #fff; font-size: 15px; font-weight: 900;
+  box-shadow: 0 2px 8px rgba(255,122,92,0.45);
+  letter-spacing: -0.5px;
+}
+.logo-text {
+  font-size: 18px; font-weight: 800; letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #fff 20%, var(--accent-2));
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text; font-weight: 700;
+  background-clip: text;
+  padding-left: 5px;
+}
+
+/* 페이지 타이틀 (로고 오른쪽) */
+.topbar-page-title {
+  margin: 0; flex: 1;
+  font-size: 14px; font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding-left: 10px;
 }
 .back-btn {
   background: var(--surface-light); border: 1px solid var(--border);
