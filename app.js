@@ -11,52 +11,125 @@
   const DIV_APPLIED_CATS = ['div_share','div_unit','div_pour'];
   const PCT_APPLIED_CATS = ['pct_sale','pct_pop','pct_tip'];
 
-  // 퍼센트 — 20레벨, 각 레벨 기초 20 + 응용 20
-  const PCT_LEVELS = Array.from({ length: 20 }, (_, i) => i + 1);
+  // 퍼센트 — 100그룹 (레벨10×그룹10), 각 그룹 기초 20 + 응용 20
+  // 레벨1~2: 10·25·50·100% / 레벨3~4: 5·20·30·60·75·80% / 레벨5~6: 40·70·90%
+  // 레벨7~8: 비정형 11~19% / 레벨9~10: 비정형 21~29% /
+  // 레벨11~12: 1~5% 소량 / 레벨13~14: 60~95% 고비율 /
+  // 레벨15~16: 혼합 / 레벨17~18: 큰 금액 + 소수점% / 레벨19~20: 극한
+  // (홀수 그룹: "A의 N%는?", 짝수 그룹: "X는 A의 몇%?")
+  const PCT_LEVELS = Array.from({ length: 100 }, (_, i) => i + 1);
   const PCT_APPLIED_GOAL = 20;
-  // type: 'of' = "A의 N%는?", 'ratio' = "X는 A의 몇 %?"
-  // vals × pcts >= 20 보장 → 중복 없이 20문제 추출
   const PCT_LEVEL_CFG = {
-    // Lv 1: 10·25·50·100% — 가장 친숙한 %로 시작, 금액 다양하게
-    1:  { type: 'of',    vals: [100,200,300,400,500,600,800,1000,1200,2000], pcts: [10,25,50,100] },
-    // Lv 2: 위 조합을 역방향 (X는 A의 몇 %)
-    2:  { type: 'ratio', vals: [100,200,300,400,500,600,800,1000,1200,2000], pcts: [10,25,50,100] },
-    // Lv 3: 5·20·75% 추가
-    3:  { type: 'of',    vals: [100,200,300,400,500,800,1000,2000],          pcts: [5,10,20,25,50,75] },
-    // Lv 4: 역방향
-    4:  { type: 'ratio', vals: [100,200,300,400,500,800,1000,2000],          pcts: [5,10,20,25,50,75] },
-    // Lv 5: 30·40·60% 추가
-    5:  { type: 'of',    vals: [100,200,300,400,500,600,800,1000],           pcts: [10,20,25,30,40,50,60] },
-    // Lv 6: 역방향
-    6:  { type: 'ratio', vals: [100,200,300,400,500,600,800,1000],           pcts: [10,20,25,30,40,50,60] },
-    // Lv 7: 15·35·70·80·90% 추가, 금액 커짐
-    7:  { type: 'of',    vals: [200,400,500,600,800,1000,1200,2000],         pcts: [5,10,15,20,25,30,35,40,50] },
-    // Lv 8: 역방향
-    8:  { type: 'ratio', vals: [200,400,500,600,800,1000,1200,2000],         pcts: [5,10,15,20,25,30,35,40,50] },
-    // Lv 9: 1·2·3% 소량 % 등장
-    9:  { type: 'of',    vals: [100,200,300,400,500,1000,2000,3000,5000],    pcts: [1,2,3,5,10,15,20,25] },
-    // Lv 10: 역방향
-    10: { type: 'ratio', vals: [100,200,300,400,500,1000,2000,3000,5000],    pcts: [1,2,3,5,10,15,20,25] },
-    // Lv 11: 60·70·80·90% 후반 % 강화
-    11: { type: 'of',    vals: [200,400,500,800,1000,2000],                  pcts: [30,40,50,60,70,75,80,90] },
-    // Lv 12: 역방향
-    12: { type: 'ratio', vals: [200,400,500,800,1000,2000],                  pcts: [30,40,50,60,70,75,80,90] },
-    // Lv 13: 비정형 % (11~19·21~29) 등장
-    13: { type: 'of',    vals: [100,200,400,500,800,1000],                   pcts: [11,12,13,14,15,16,17,18,19] },
-    // Lv 14: 역방향
-    14: { type: 'ratio', vals: [100,200,400,500,800,1000],                   pcts: [11,12,13,14,15,16,17,18,19] },
-    // Lv 15: 21~29% 범위
-    15: { type: 'of',    vals: [200,400,500,1000,2000,4000],                 pcts: [21,22,23,24,25,26,27,28] },
-    // Lv 16: 역방향
-    16: { type: 'ratio', vals: [200,400,500,1000,2000,4000],                 pcts: [21,22,23,24,25,26,27,28] },
-    // Lv 17: 큰 금액 + 비정형 % 혼합
-    17: { type: 'of',    vals: [1000,2000,3000,5000,8000,10000],             pcts: [7,11,13,17,23,27,33,37] },
-    // Lv 18: 역방향
-    18: { type: 'ratio', vals: [1000,2000,3000,5000,8000,10000],             pcts: [7,11,13,17,23,27,33,37] },
-    // Lv 19: 매우 큰 금액 + 소수점 가능 %
-    19: { type: 'of',    vals: [10000,20000,50000,100000],                   pcts: [3,5,7,8,9,11,13,17,19,23] },
-    // Lv 20: 역방향
-    20: { type: 'ratio', vals: [10000,20000,50000,100000],                   pcts: [3,5,7,8,9,11,13,17,19,23] },
+    // ── 레벨 1 (G1~10): 10·25·50·100% — 가장 친숙한 % ──
+    1:  { type:'of',    vals:[100,200,300,400,500,800,1000,2000],       pcts:[10,50,100] },
+    2:  { type:'of',    vals:[100,200,300,400,500,800,1000,2000],       pcts:[10,25,50,100] },
+    3:  { type:'of',    vals:[100,200,300,400,500,600,800,1000,2000],   pcts:[10,25,50,100] },
+    4:  { type:'of',    vals:[100,200,300,400,500,600,800,1000,2000],   pcts:[10,20,25,50,100] },
+    5:  { type:'of',    vals:[100,200,300,400,500,800,1000,2000,5000],  pcts:[10,20,25,50] },
+    6:  { type:'of',    vals:[100,200,300,400,500,800,1000,2000,5000],  pcts:[10,25,50,75,100] },
+    7:  { type:'of',    vals:[100,200,400,500,800,1000,2000,5000],      pcts:[10,20,25,50,75] },
+    8:  { type:'of',    vals:[100,200,400,500,800,1000,2000,5000],      pcts:[10,20,25,50,75,100] },
+    9:  { type:'of',    vals:[100,200,300,400,500,800,1000,2000,5000],  pcts:[5,10,20,25,50,75] },
+    10: { type:'of',    vals:[100,200,300,400,500,800,1000,2000,5000],  pcts:[5,10,20,25,50,75,100] },
+    // ── 레벨 2 (G11~20): 레벨1과 같은 난이도, 역방향(몇%?) ──
+    11: { type:'ratio', vals:[100,200,300,400,500,800,1000,2000],       pcts:[10,50,100] },
+    12: { type:'ratio', vals:[100,200,300,400,500,800,1000,2000],       pcts:[10,25,50,100] },
+    13: { type:'ratio', vals:[100,200,300,400,500,600,800,1000,2000],   pcts:[10,25,50,100] },
+    14: { type:'ratio', vals:[100,200,300,400,500,600,800,1000,2000],   pcts:[10,20,25,50,100] },
+    15: { type:'ratio', vals:[100,200,300,400,500,800,1000,2000,5000],  pcts:[10,20,25,50] },
+    16: { type:'ratio', vals:[100,200,300,400,500,800,1000,2000,5000],  pcts:[10,25,50,75,100] },
+    17: { type:'ratio', vals:[100,200,400,500,800,1000,2000,5000],      pcts:[10,20,25,50,75] },
+    18: { type:'ratio', vals:[100,200,400,500,800,1000,2000,5000],      pcts:[10,20,25,50,75,100] },
+    19: { type:'ratio', vals:[100,200,300,400,500,800,1000,2000,5000],  pcts:[5,10,20,25,50,75] },
+    20: { type:'ratio', vals:[100,200,300,400,500,800,1000,2000,5000],  pcts:[5,10,20,25,50,75,100] },
+    // ── 레벨 3 (G21~30): 5·20·30·40·60% 추가 ──
+    21: { type:'of',    vals:[100,200,400,500,800,1000,2000],           pcts:[5,10,20,30,40] },
+    22: { type:'of',    vals:[100,200,400,500,800,1000,2000],           pcts:[10,20,30,40,50,60] },
+    23: { type:'of',    vals:[100,200,400,500,800,1000,2000],           pcts:[5,10,20,25,30,50] },
+    24: { type:'of',    vals:[100,200,400,500,800,1000,2000],           pcts:[5,20,30,40,50,60] },
+    25: { type:'of',    vals:[200,400,500,800,1000,2000,4000],          pcts:[5,10,20,30,40,50] },
+    26: { type:'of',    vals:[200,400,500,800,1000,2000,4000],          pcts:[5,10,20,25,40,50,60] },
+    27: { type:'of',    vals:[200,400,500,800,1000,2000,4000],          pcts:[10,20,30,40,50,60,75] },
+    28: { type:'of',    vals:[200,400,500,800,1000,2000,4000],          pcts:[5,10,20,25,30,40,50,60] },
+    29: { type:'of',    vals:[100,200,400,500,800,1000,2000,4000],      pcts:[5,10,15,20,25,30,40,50] },
+    30: { type:'of',    vals:[100,200,400,500,800,1000,2000,4000],      pcts:[5,10,15,20,25,30,40,50,60,75] },
+    // ── 레벨 4 (G31~40): 레벨3 역방향 ──
+    31: { type:'ratio', vals:[100,200,400,500,800,1000,2000],           pcts:[5,10,20,30,40] },
+    32: { type:'ratio', vals:[100,200,400,500,800,1000,2000],           pcts:[10,20,30,40,50,60] },
+    33: { type:'ratio', vals:[100,200,400,500,800,1000,2000],           pcts:[5,10,20,25,30,50] },
+    34: { type:'ratio', vals:[100,200,400,500,800,1000,2000],           pcts:[5,20,30,40,50,60] },
+    35: { type:'ratio', vals:[200,400,500,800,1000,2000,4000],          pcts:[5,10,20,30,40,50] },
+    36: { type:'ratio', vals:[200,400,500,800,1000,2000,4000],          pcts:[5,10,20,25,40,50,60] },
+    37: { type:'ratio', vals:[200,400,500,800,1000,2000,4000],          pcts:[10,20,30,40,50,60,75] },
+    38: { type:'ratio', vals:[200,400,500,800,1000,2000,4000],          pcts:[5,10,20,25,30,40,50,60] },
+    39: { type:'ratio', vals:[100,200,400,500,800,1000,2000,4000],      pcts:[5,10,15,20,25,30,40,50] },
+    40: { type:'ratio', vals:[100,200,400,500,800,1000,2000,4000],      pcts:[5,10,15,20,25,30,40,50,60,75] },
+    // ── 레벨 5 (G41~50): 15·35·40·60·70·80·90% ──
+    41: { type:'of',    vals:[200,400,500,800,1000,2000],               pcts:[15,35,45,55,65] },
+    42: { type:'of',    vals:[200,400,500,800,1000,2000],               pcts:[30,40,60,70,80] },
+    43: { type:'of',    vals:[200,400,500,800,1000,2000,4000],          pcts:[15,30,45,60,75,90] },
+    44: { type:'of',    vals:[200,400,500,800,1000,2000,4000],          pcts:[35,40,55,65,70,80] },
+    45: { type:'of',    vals:[200,400,500,800,1000,2000,4000],          pcts:[15,25,35,45,55,65] },
+    46: { type:'of',    vals:[200,400,600,800,1000,2000,4000],          pcts:[30,40,50,60,70,80,90] },
+    47: { type:'of',    vals:[200,400,600,800,1000,2000,4000],          pcts:[15,25,35,45,55,65,75] },
+    48: { type:'of',    vals:[200,400,600,800,1000,2000,4000],          pcts:[20,30,40,60,70,80,90] },
+    49: { type:'of',    vals:[200,400,600,800,1000,2000,4000,5000],     pcts:[15,30,45,50,60,70,80] },
+    50: { type:'of',    vals:[200,400,600,800,1000,2000,4000,5000],     pcts:[15,25,35,40,50,60,70,80,90] },
+    // ── 레벨 6 (G51~60): 레벨5 역방향 ──
+    51: { type:'ratio', vals:[200,400,500,800,1000,2000],               pcts:[15,35,45,55,65] },
+    52: { type:'ratio', vals:[200,400,500,800,1000,2000],               pcts:[30,40,60,70,80] },
+    53: { type:'ratio', vals:[200,400,500,800,1000,2000,4000],          pcts:[15,30,45,60,75,90] },
+    54: { type:'ratio', vals:[200,400,500,800,1000,2000,4000],          pcts:[35,40,55,65,70,80] },
+    55: { type:'ratio', vals:[200,400,500,800,1000,2000,4000],          pcts:[15,25,35,45,55,65] },
+    56: { type:'ratio', vals:[200,400,600,800,1000,2000,4000],          pcts:[30,40,50,60,70,80,90] },
+    57: { type:'ratio', vals:[200,400,600,800,1000,2000,4000],          pcts:[15,25,35,45,55,65,75] },
+    58: { type:'ratio', vals:[200,400,600,800,1000,2000,4000],          pcts:[20,30,40,60,70,80,90] },
+    59: { type:'ratio', vals:[200,400,600,800,1000,2000,4000,5000],     pcts:[15,30,45,50,60,70,80] },
+    60: { type:'ratio', vals:[200,400,600,800,1000,2000,4000,5000],     pcts:[15,25,35,40,50,60,70,80,90] },
+    // ── 레벨 7 (G61~70): 비정형 % 11~19 등장 ──
+    61: { type:'of',    vals:[100,200,400,500,800,1000],                pcts:[11,12,13,14,15] },
+    62: { type:'of',    vals:[100,200,400,500,800,1000],                pcts:[16,17,18,19] },
+    63: { type:'of',    vals:[100,200,400,500,800,1000],                pcts:[11,13,15,17,19] },
+    64: { type:'of',    vals:[200,400,500,800,1000,2000],               pcts:[11,12,13,14,15,16] },
+    65: { type:'of',    vals:[200,400,500,800,1000,2000],               pcts:[14,15,16,17,18,19] },
+    66: { type:'of',    vals:[200,400,500,800,1000,2000],               pcts:[11,12,13,15,17,19] },
+    67: { type:'of',    vals:[200,400,600,1000,2000,4000],              pcts:[11,13,15,17,19] },
+    68: { type:'of',    vals:[200,400,600,1000,2000,4000],              pcts:[11,12,13,14,15,16,17] },
+    69: { type:'of',    vals:[100,200,400,600,1000,2000,4000],          pcts:[11,13,15,17,18,19] },
+    70: { type:'of',    vals:[100,200,400,600,1000,2000,4000],          pcts:[11,12,13,14,15,16,17,18,19] },
+    // ── 레벨 8 (G71~80): 레벨7 역방향 ──
+    71: { type:'ratio', vals:[100,200,400,500,800,1000],                pcts:[11,12,13,14,15] },
+    72: { type:'ratio', vals:[100,200,400,500,800,1000],                pcts:[16,17,18,19] },
+    73: { type:'ratio', vals:[100,200,400,500,800,1000],                pcts:[11,13,15,17,19] },
+    74: { type:'ratio', vals:[200,400,500,800,1000,2000],               pcts:[11,12,13,14,15,16] },
+    75: { type:'ratio', vals:[200,400,500,800,1000,2000],               pcts:[14,15,16,17,18,19] },
+    76: { type:'ratio', vals:[200,400,500,800,1000,2000],               pcts:[11,12,13,15,17,19] },
+    77: { type:'ratio', vals:[200,400,600,1000,2000,4000],              pcts:[11,13,15,17,19] },
+    78: { type:'ratio', vals:[200,400,600,1000,2000,4000],              pcts:[11,12,13,14,15,16,17] },
+    79: { type:'ratio', vals:[100,200,400,600,1000,2000,4000],          pcts:[11,13,15,17,18,19] },
+    80: { type:'ratio', vals:[100,200,400,600,1000,2000,4000],          pcts:[11,12,13,14,15,16,17,18,19] },
+    // ── 레벨 9 (G81~90): 비정형 % 21~29 ──
+    81: { type:'of',    vals:[100,200,400,500,800,1000],                pcts:[21,22,23,24,25] },
+    82: { type:'of',    vals:[100,200,400,500,800,1000],                pcts:[26,27,28,29] },
+    83: { type:'of',    vals:[100,200,400,500,800,1000],                pcts:[21,23,25,27,29] },
+    84: { type:'of',    vals:[200,400,500,800,1000,2000],               pcts:[21,22,23,24,25,26] },
+    85: { type:'of',    vals:[200,400,500,800,1000,2000],               pcts:[24,25,26,27,28,29] },
+    86: { type:'of',    vals:[200,400,600,1000,2000,4000],              pcts:[21,23,25,27,29] },
+    87: { type:'of',    vals:[200,400,600,1000,2000,4000],              pcts:[21,22,23,24,25,26,27] },
+    88: { type:'of',    vals:[200,400,600,1000,2000,4000],              pcts:[21,23,25,27,28,29] },
+    89: { type:'of',    vals:[100,200,400,600,1000,2000,4000],          pcts:[21,22,23,25,27,28,29] },
+    90: { type:'of',    vals:[100,200,400,600,1000,2000,4000],          pcts:[21,22,23,24,25,26,27,28,29] },
+    // ── 레벨 10 (G91~100): 레벨9 역방향 ──
+    91: { type:'ratio', vals:[100,200,400,500,800,1000],                pcts:[21,22,23,24,25] },
+    92: { type:'ratio', vals:[100,200,400,500,800,1000],                pcts:[26,27,28,29] },
+    93: { type:'ratio', vals:[100,200,400,500,800,1000],                pcts:[21,23,25,27,29] },
+    94: { type:'ratio', vals:[200,400,500,800,1000,2000],               pcts:[21,22,23,24,25,26] },
+    95: { type:'ratio', vals:[200,400,500,800,1000,2000],               pcts:[24,25,26,27,28,29] },
+    96: { type:'ratio', vals:[200,400,600,1000,2000,4000],              pcts:[21,23,25,27,29] },
+    97: { type:'ratio', vals:[200,400,600,1000,2000,4000],              pcts:[21,22,23,24,25,26,27] },
+    98: { type:'ratio', vals:[200,400,600,1000,2000,4000],              pcts:[21,23,25,27,28,29] },
+    99: { type:'ratio', vals:[100,200,400,600,1000,2000,4000],          pcts:[21,22,23,25,27,28,29] },
+    100:{ type:'ratio', vals:[100,200,400,600,1000,2000,4000],          pcts:[21,22,23,24,25,26,27,28,29] },
   };
 
   // 레벨별 전체 (val, pct) 조합을 결정적으로 섞어 idx번째 반환 → 중복 없음
@@ -94,33 +167,123 @@
     return { cat, vars: { a, b }, answer, text: t(`cats.${cat}.q`, { a, b }) };
   }
 
-  // 나누기 — 20레벨, 각 레벨 기초 12문제 + 응용 20문제
-  const DIV_LEVELS = Array.from({ length: 20 }, (_, i) => i + 1);
+  // 나누기 — 100그룹 (레벨10×그룹10), 각 그룹 기초 12문제 + 응용 20문제
+  const DIV_LEVELS = Array.from({ length: 100 }, (_, i) => i + 1);
   const DIV_LEVEL_QCOUNT = 12;
   const DIV_APPLIED_GOAL = 20;
 
-  // 레벨별 자릿수 / 제수 풀 (모두 정수 답으로 생성)
+  // 그룹별 난이도 설정 (정수 나누기 → 큰 수 → 소수점 순)
   const DIV_LEVEL_CFG = {
-    1:  { dMin: 10,    dMax: 99,    divisors: [2,3,4,5] },
-    2:  { dMin: 10,    dMax: 99,    divisors: [6,7,8,9] },
-    3:  { dMin: 20,    dMax: 99,    divisors: [11,12,13,14,15] },
-    4:  { dMin: 30,    dMax: 99,    divisors: [16,17,18,19] },
-    5:  { dMin: 100,   dMax: 499,   divisors: [2,3,4,5] },
-    6:  { dMin: 100,   dMax: 999,   divisors: [6,7,8,9] },
-    7:  { dMin: 100,   dMax: 999,   divisors: [11,12,13,14,15] },
-    8:  { dMin: 100,   dMax: 999,   divisors: [16,17,18,19] },
-    9:  { dMin: 200,   dMax: 999,   divisors: [21,22,23,24,25] },
-    10: { dMin: 300,   dMax: 999,   divisors: [30,35,40,45,50] },
-    11: { dMin: 200,  dMax: 999,  divisors: [41,42,44,45,48,50] },
-    12: { dMin: 300,  dMax: 999,  divisors: [51,52,54,56,60] },
-    13: { dMin: 350,  dMax: 999,  divisors: [63,65,66,70,72,75] },
-    14: { dMin: 400,  dMax: 999,  divisors: [76,78,80,84,88,90] },
-    15: { dMin: 200,  dMax: 999,  divisors: [91,92,93,95,96,98,99] },
-    16: { dMin: 100,  dMax: 499,  divisors: [2,4,5,6,8,10], decimal: true },
-    17: { dMin: 100,  dMax: 699,  divisors: [11,13,14,16,17,19,21,23,25], decimal: true },
-    18: { dMin: 200,  dMax: 799,  divisors: [26,27,28,31,33,35,37,41,43], decimal: true },
-    19: { dMin: 300,  dMax: 899,  divisors: [51,53,55,57,61,63,65,68,70], decimal: true },
-    20: { dMin: 400,  dMax: 999,  divisors: [76,78,81,83,86,88,91,95,99], decimal: true },
+    // ── 레벨 1 (G1~10): 한 자리 제수, 두 자리 피제수 ──
+    1:  { dMin:10,  dMax:40,  divisors:[2] },
+    2:  { dMin:12,  dMax:60,  divisors:[3] },
+    3:  { dMin:20,  dMax:80,  divisors:[4] },
+    4:  { dMin:15,  dMax:75,  divisors:[5] },
+    5:  { dMin:18,  dMax:96,  divisors:[6] },
+    6:  { dMin:21,  dMax:98,  divisors:[7] },
+    7:  { dMin:24,  dMax:96,  divisors:[8] },
+    8:  { dMin:27,  dMax:99,  divisors:[9] },
+    9:  { dMin:10,  dMax:99,  divisors:[2,3] },
+    10: { dMin:12,  dMax:96,  divisors:[4,5,6] },
+    // ── 레벨 2 (G11~20): 한 자리 제수, 세 자리 피제수 ──
+    11: { dMin:100, dMax:400, divisors:[2] },
+    12: { dMin:102, dMax:600, divisors:[3] },
+    13: { dMin:100, dMax:500, divisors:[4] },
+    14: { dMin:100, dMax:500, divisors:[5] },
+    15: { dMin:102, dMax:600, divisors:[6] },
+    16: { dMin:105, dMax:700, divisors:[7] },
+    17: { dMin:104, dMax:800, divisors:[8] },
+    18: { dMin:108, dMax:900, divisors:[9] },
+    19: { dMin:100, dMax:600, divisors:[2,3,4] },
+    20: { dMin:100, dMax:700, divisors:[5,6,7,8,9] },
+    // ── 레벨 3 (G21~30): 제수 10~19 ──
+    21: { dMin:20,  dMax:200, divisors:[10] },
+    22: { dMin:22,  dMax:220, divisors:[11] },
+    23: { dMin:24,  dMax:240, divisors:[12] },
+    24: { dMin:26,  dMax:260, divisors:[13,14] },
+    25: { dMin:30,  dMax:300, divisors:[15] },
+    26: { dMin:32,  dMax:320, divisors:[16,17] },
+    27: { dMin:36,  dMax:360, divisors:[18,19] },
+    28: { dMin:30,  dMax:300, divisors:[10,11,12] },
+    29: { dMin:40,  dMax:400, divisors:[13,14,15] },
+    30: { dMin:50,  dMax:500, divisors:[16,17,18,19] },
+    // ── 레벨 4 (G31~40): 제수 20~39 ──
+    31: { dMin:40,  dMax:400, divisors:[20,21] },
+    32: { dMin:60,  dMax:500, divisors:[22,23,24] },
+    33: { dMin:50,  dMax:500, divisors:[25] },
+    34: { dMin:80,  dMax:600, divisors:[26,27,28] },
+    35: { dMin:90,  dMax:600, divisors:[29,30] },
+    36: { dMin:100, dMax:700, divisors:[31,32,33] },
+    37: { dMin:100, dMax:700, divisors:[34,35] },
+    38: { dMin:100, dMax:700, divisors:[36,37] },
+    39: { dMin:110, dMax:800, divisors:[38,39] },
+    40: { dMin:100, dMax:700, divisors:[20,25,30,35] },
+    // ── 레벨 5 (G41~50): 제수 40~59 ──
+    41: { dMin:120, dMax:800, divisors:[40,41] },
+    42: { dMin:130, dMax:800, divisors:[42,43,44] },
+    43: { dMin:135, dMax:900, divisors:[45] },
+    44: { dMin:140, dMax:900, divisors:[46,47,48] },
+    45: { dMin:150, dMax:900, divisors:[49,50] },
+    46: { dMin:150, dMax:900, divisors:[51,52,53] },
+    47: { dMin:160, dMax:999, divisors:[54,55] },
+    48: { dMin:170, dMax:999, divisors:[56,57,58] },
+    49: { dMin:180, dMax:999, divisors:[59] },
+    50: { dMin:200, dMax:999, divisors:[40,45,50,55] },
+    // ── 레벨 6 (G51~60): 제수 60~79 ──
+    51: { dMin:180, dMax:900, divisors:[60,61,62] },
+    52: { dMin:190, dMax:900, divisors:[63,64,65] },
+    53: { dMin:200, dMax:900, divisors:[66,67,68] },
+    54: { dMin:210, dMax:999, divisors:[69,70] },
+    55: { dMin:210, dMax:999, divisors:[71,72,73] },
+    56: { dMin:220, dMax:999, divisors:[74,75] },
+    57: { dMin:230, dMax:999, divisors:[76,77,78] },
+    58: { dMin:240, dMax:999, divisors:[79] },
+    59: { dMin:240, dMax:999, divisors:[60,65,70,75] },
+    60: { dMin:240, dMax:999, divisors:[62,64,68,72,76] },
+    // ── 레벨 7 (G61~70): 제수 80~99 ──
+    61: { dMin:240, dMax:960, divisors:[80,81,82] },
+    62: { dMin:250, dMax:999, divisors:[83,84,85] },
+    63: { dMin:260, dMax:999, divisors:[86,87,88] },
+    64: { dMin:270, dMax:999, divisors:[89,90] },
+    65: { dMin:280, dMax:999, divisors:[91,92,93] },
+    66: { dMin:280, dMax:999, divisors:[94,95] },
+    67: { dMin:290, dMax:999, divisors:[96,97,98] },
+    68: { dMin:300, dMax:999, divisors:[99] },
+    69: { dMin:320, dMax:999, divisors:[80,85,90,95] },
+    70: { dMin:320, dMax:999, divisors:[81,84,90,96,99] },
+    // ── 레벨 8 (G71~80): 네 자리 큰 수 나누기 ──
+    71: { dMin:500,  dMax:5000, divisors:[2,3,4,5] },
+    72: { dMin:600,  dMax:5000, divisors:[6,7,8,9] },
+    73: { dMin:800,  dMax:5000, divisors:[10,11,12,15] },
+    74: { dMin:1000, dMax:5000, divisors:[20,25,50] },
+    75: { dMin:1000, dMax:9900, divisors:[100] },
+    76: { dMin:1000, dMax:8000, divisors:[200,400,500] },
+    77: { dMin:1000, dMax:9000, divisors:[11,13,17,19] },
+    78: { dMin:1000, dMax:8000, divisors:[23,29,31] },
+    79: { dMin:1000, dMax:9000, divisors:[37,41,43,47] },
+    80: { dMin:2000, dMax:9000, divisors:[100,200,500] },
+    // ── 레벨 9 (G81~90): 소수점 나누기, 작은 제수 ──
+    81: { dMin:10,  dMax:90,  divisors:[3],           decimal:true },
+    82: { dMin:10,  dMax:90,  divisors:[6],           decimal:true },
+    83: { dMin:10,  dMax:90,  divisors:[7],           decimal:true },
+    84: { dMin:20,  dMax:150, divisors:[3,6],         decimal:true },
+    85: { dMin:20,  dMax:150, divisors:[7,9],         decimal:true },
+    86: { dMin:50,  dMax:300, divisors:[11,13],       decimal:true },
+    87: { dMin:50,  dMax:300, divisors:[17,19],       decimal:true },
+    88: { dMin:100, dMax:500, divisors:[3,6,7,9],     decimal:true },
+    89: { dMin:100, dMax:500, divisors:[11,13,17,19], decimal:true },
+    90: { dMin:100, dMax:500, divisors:[7,11,13,17],  decimal:true },
+    // ── 레벨 10 (G91~100): 소수점 나누기, 큰 제수 ──
+    91: { dMin:100, dMax:500, divisors:[23,29,31],       decimal:true },
+    92: { dMin:100, dMax:600, divisors:[37,41,43],       decimal:true },
+    93: { dMin:200, dMax:700, divisors:[47,53,59],       decimal:true },
+    94: { dMin:200, dMax:800, divisors:[61,67,71],       decimal:true },
+    95: { dMin:300, dMax:900, divisors:[73,79,83],       decimal:true },
+    96: { dMin:300, dMax:999, divisors:[89,97],          decimal:true },
+    97: { dMin:200, dMax:800, divisors:[23,29,37,41],    decimal:true },
+    98: { dMin:200, dMax:900, divisors:[43,47,53,59],    decimal:true },
+    99: { dMin:300, dMax:999, divisors:[61,67,71,73],    decimal:true },
+    100:{ dMin:400, dMax:999, divisors:[79,83,89,97],    decimal:true },
   };
 
   // 결정적 난수 (레벨×인덱스 시드)
@@ -730,9 +893,24 @@
     draw();
   }
 
+  // ---- 그룹 설명 헬퍼 ----
+  function divGroupDesc(lv) {
+    const c = DIV_LEVEL_CFG[lv];
+    if (!c) return '';
+    const ds = c.divisors;
+    const dStr = ds.length === 1 ? `÷${ds[0]}` : `÷${ds[0]}~÷${ds[ds.length-1]}`;
+    return `${c.dMin}~${c.dMax} ${dStr}${c.decimal ? ' (소수)' : ''}`;
+  }
+  function pctGroupDesc(lv) {
+    const c = PCT_LEVEL_CFG[lv];
+    if (!c) return '';
+    const typeStr = c.type === 'of' ? t('pct.catOf') : t('pct.catRatio');
+    return `${typeStr} · ${c.pcts[0]}~${c.pcts[c.pcts.length-1]}%`;
+  }
+
   // ---- 나누기 ----
   const DIV_GROUP_SIZE = 10; // 레벨당 그룹 수
-  const DIV_SUPER_COUNT = 2; // 총 레벨 수 (10개씩 2레벨 = 20그룹)
+  const DIV_SUPER_COUNT = 10; // 총 레벨 수 (10개씩 10레벨 = 100그룹)
   function divGroupRange(superLv) {
     const start = (superLv - 1) * DIV_GROUP_SIZE + 1;
     const end = superLv * DIV_GROUP_SIZE;
@@ -781,7 +959,7 @@
         cards.push(`
           <div class="card ${fully ? 'complete' : ''}" data-lv="${lv}">
             <div class="label">${t('common.group')} ${lv}</div>
-            <div class="sub">${t(`div.levelDesc.${lv}`)}</div>
+            <div class="sub">${divGroupDesc(lv)}</div>
             <div class="progress-bar"><span style="width:${pct}%"></span></div>
             <div class="sub">${basic}/${DIV_LEVEL_QCOUNT}</div>
           </div>`);
@@ -804,7 +982,7 @@
       const basicCount = divLevelCount(lv);
       const applied = divAppliedCount(lv);
       app.innerHTML = `
-        <div class="section-title">${t(`div.levelDesc.${lv}`)}</div>
+        <div class="section-title">${divGroupDesc(lv)}</div>
         <div class="stage-list">
           <div class="card stage-card ${basicDone ? 'complete' : ''}" data-stage="basic">
             <div class="label">${t('common.basic')}</div>
@@ -863,7 +1041,7 @@
 
   function renderDivBasicQuiz(level, superLevel) {
     superLevel = superLevel || Math.ceil(level / DIV_GROUP_SIZE);
-    const desc = t(`div.levelDesc.${level}`);
+    const desc = divGroupDesc(level);
     titleEl.textContent = `${t('common.group')} ${level} · ${desc}`;
     const state = progress.div.basic[level] || {};
     const isDecimalLevel = !!DIV_LEVEL_CFG[level]?.decimal;
@@ -936,7 +1114,7 @@
 
   // ---- 퍼센트 ----
   const PCT_GROUP_SIZE = 10;
-  const PCT_SUPER_COUNT = 2;
+  const PCT_SUPER_COUNT = 10;
   function pctGroupRange(superLv) {
     const start = (superLv - 1) * PCT_GROUP_SIZE + 1;
     const end = superLv * PCT_GROUP_SIZE;
@@ -982,11 +1160,10 @@
         const applied = pctAppliedCount(lv);
         const fully = pctFullyDone(lv);
         const pct = Math.round((basic / PCT_BASIC_COUNT * 0.5 + Math.min(applied / PCT_APPLIED_GOAL, 1) * 0.5) * 100);
-        const type = PCT_LEVEL_CFG[lv].type;
         cards.push(`
           <div class="card ${fully ? 'complete' : ''}" data-lv="${lv}">
             <div class="label">${t('common.group')} ${lv}</div>
-            <div class="sub">${type === 'of' ? t('pct.catOf') : t('pct.catRatio')}</div>
+            <div class="sub">${pctGroupDesc(lv)}</div>
             <div class="progress-bar"><span style="width:${pct}%"></span></div>
             <div class="sub">${basic}/${PCT_BASIC_COUNT}</div>
           </div>`);
@@ -1004,14 +1181,12 @@
     // ③ 기초/응용 선택
     if (v.name === 'groupMenu') {
       const lv = v.level;
-      const type = PCT_LEVEL_CFG[lv].type;
-      const typeLabel = type === 'of' ? t('pct.catOf') : t('pct.catRatio');
       titleEl.textContent = `${t('common.group')} ${lv}`;
       const basicDone = pctLevelDone(lv);
       const basicCount = pctLevelCount(lv);
       const applied = pctAppliedCount(lv);
       app.innerHTML = `
-        <div class="section-title">${typeLabel}</div>
+        <div class="section-title">${pctGroupDesc(lv)}</div>
         <div class="stage-list">
           <div class="card stage-card ${basicDone ? 'complete' : ''}" data-stage="basic">
             <div class="label">${t('common.basic')}</div>
@@ -1070,9 +1245,8 @@
 
   function renderPctBasicQuiz(level, superLevel) {
     superLevel = superLevel || Math.ceil(level / PCT_GROUP_SIZE);
-    const cfg = PCT_LEVEL_CFG[level];
-    const typeLabel = cfg.type === 'of' ? t('pct.catOf') : t('pct.catRatio');
-    titleEl.textContent = `${t('common.group')} ${level} · ${typeLabel}`;
+    const typeLabel = pctGroupDesc(level);
+    titleEl.textContent = `${t('common.group')} ${level}`;
     const state = progress.pct.basic[level] || {};
     const probs = Array.from({ length: PCT_BASIC_COUNT }, (_, i) => genPctBasicProblem(level, i));
     const rows = probs.map((p, i) => {
