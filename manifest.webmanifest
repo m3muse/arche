@@ -1,0 +1,20 @@
+{
+  "name": "Arche — 기초 산수",
+  "short_name": "Arche",
+  "description": "곱하기·나누기·퍼센트를 단계별로 연습하는 기초 산수 학습 앱",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
