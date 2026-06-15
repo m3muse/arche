@@ -46,20 +46,19 @@ body {
 
 /* 로고 */
 .topbar-logo {
-  display: flex; align-items: center; flex-shrink: 0;
+  display: flex; align-items: center; gap: 2px; flex-shrink: 0;
+}
+.logo-arch {
+  width: 26px; height: 28px;
+  color: var(--text);
+  flex-shrink: 0;
 }
 .logo-text {
   font-family: 'Outfit', system-ui, sans-serif;
   font-size: 22px; font-weight: 900;
   letter-spacing: -1px;
   color: var(--text);
-  position: relative;
-}
-.logo-text::after {
-  content: '.';
-  color: var(--yellow-dk);
-  font-size: 28px; line-height: 0;
-  vertical-align: -4px;
+  line-height: 1;
 }
 
 /* 페이지 타이틀 */
