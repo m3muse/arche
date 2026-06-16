@@ -1,4 +1,4 @@
-const CACHE = 'arche-v16';
+const CACHE = 'arche-v17';
 const ASSETS = [
   './',
   './index.html',

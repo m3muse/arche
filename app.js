@@ -548,8 +548,17 @@
 
   function renderGuestGate() {
     titleEl.textContent = t('common.loginRequired');
+    const lang = window.currentLang;
+    const langOpts = [
+      ['ko', '한국어'],
+      ['zh', '中文'],
+      ['en', 'English'],
+    ].map(([code, name]) =>
+      `<button class="lang-btn ${lang === code ? 'active' : ''}" data-lang="${code}">${name}</button>`
+    ).join('');
     app.innerHTML = `
       <section class="settings-section" style="margin-top:24px">
+        <div class="lang-row" style="display:flex;gap:8px;justify-content:center;margin-bottom:20px">${langOpts}</div>
         <h3>🔒 ${t('common.loginRequired')}</h3>
         <div class="sub" style="margin:12px 0">${t('common.loginRequiredDesc')}</div>
         <div class="login-box">
@@ -557,6 +566,9 @@
           <button class="primary-btn" id="gateLoginBtn">${t('settings.login')}</button>
         </div>
       </section>`;
+    app.querySelectorAll('.lang-btn').forEach(b =>
+      b.addEventListener('click', () => { setLang(b.dataset.lang); renderGuestGate(); })
+    );
     const nameInput = document.getElementById('gateLoginName');
     const doLogin = () => {
       const name = nameInput.value.trim();

@@ -178,5 +178,5 @@ TOL = 0.1                 // 정답 허용 오차
 ## PWA / 서비스워커
 
 - 오프라인 가능. 정적 자원 전체 캐시.
-- 캐시 키: `arche-v16` (코드 변경 시 버전 bump 필요).
+- 캐시 키: `arche-v17` (코드 변경 시 버전 bump 필요).
 - 매니페스트: `manifest.webmanifest`, 아이콘: `icon.svg` (노란색 PWA 아이콘).
