@@ -471,14 +471,26 @@
 
   // ====== 네비게이션 ======
   let stack = [{ tab: 'mul', name: 'levels' }];
+
+  // 핸드폰 뒤로가기 버튼 지원: 항상 history 항목을 하나 유지해 popstate 를 가로챔
+  history.replaceState({ pw: true }, '');
+  function _pushHistoryEntry() { history.pushState({ pw: true }, ''); }
+  window.addEventListener('popstate', () => {
+    if (stack.length > 1) {
+      stack.pop();
+      render();
+    }
+    // 항목을 다시 밀어넣어 다음 뒤로가기도 인터셉트
+    history.pushState({ pw: true }, '');
+  });
+
   function go(view, replace = false) {
     if (replace) stack[stack.length - 1] = view;
-    else stack.push(view);
+    else { stack.push(view); _pushHistoryEntry(); }
     render();
   }
   function back() {
-    if (stack.length > 1) stack.pop();
-    render();
+    if (stack.length > 1) { stack.pop(); render(); }
   }
   function switchTab(tab) {
     stack = [tabHome(tab)];
@@ -563,8 +575,8 @@
     applyStaticI18n();
     updateProfileChip();
 
-    // 게스트는 퀴즈 진입 차단
-    if (isGuest() && QUIZ_VIEWS.has(v.name)) {
+    // 한 번도 로그인 안 한 상태면 로그인 페이지 먼저
+    if (isGuest()) {
       renderGuestGate();
       return;
     }
@@ -861,13 +873,11 @@
         </div>
         <div class="q-actions">
           <button class="primary-btn" id="checkBtn">${t('common.confirm')}</button>
-          <button class="reset-btn" id="skipBtn">${t('common.next')}</button>
         </div>
         <div id="feedback" class="feedback"></div>`;
       const input = document.getElementById('appInput');
       const fb = document.getElementById('feedback');
       const checkBtn = document.getElementById('checkBtn');
-      const skipBtn = document.getElementById('skipBtn');
       const rb = document.getElementById('resetAppliedBtn');
       if (rb) rb.addEventListener('click', doReset);
       function attempt() {
@@ -887,7 +897,6 @@
       }
       checkBtn.addEventListener('click', attempt);
       input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); attempt(); } });
-      skipBtn.addEventListener('click', () => { problem = gen(); draw(); });
       input.focus();
     }
     draw();
